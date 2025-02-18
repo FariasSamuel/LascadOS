@@ -14,7 +14,7 @@ qemu-system-x86_64 -fda disk.img
 **reboot** - restart the system\
 **time** - show current time (doesn't work properly on qemu)\
 **shutdown** - halts the cpu\
-**mem** - show available memory (not working properly, always shows 00 KB)
+**mem** - show available memory
 
 ## To do
 
