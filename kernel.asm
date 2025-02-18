@@ -74,59 +74,46 @@ do_reboot:
     jmp 0xFFFF:0x0000
 
 do_time:
-    mov ah, 0x04   ; Get RTC time
-    int 0x1A       ; BIOS call
+    mov ah, 0x02    ; Get RTC time
+    int 0x1A        ; BIOS call
 
     mov si, time_msg
     call print_string
 
     ; Convert and print hour
     mov al, ch
-    call bcd_to_ascii
+    call print_bcd
     mov al, ':'
     call print_char
 
     ; Convert and print minute
     mov al, cl
-    call bcd_to_ascii
+    call print_bcd
     mov al, ':'
     call print_char
 
     ; Convert and print second
     mov al, dh
-    call bcd_to_ascii
-
+    call print_bcd
+    
     call new_line
     jmp command_loop
 
-; Function to convert BCD to ASCII and print
-bcd_to_ascii:
-    push ax
-    mov ah, al    ; Copy value
-    shr al, 4     ; Get upper nibble (tens place)
-    and ah, 0x0F  ; Get lower nibble (ones place)
-    add al, '0'   ; Convert to ASCII
-    add ah, '0'   ; Convert to ASCII
-
-    mov si, hex_buf
-    mov [si], al
-    mov [si+1], ah
-    call print_string
-    pop ax
-    ret
-
-
 do_shutdown:
-    cli  ; Disable interrupts
-    hlt  ; Halt the CPU
+    cli             ; Disable interrupts
+    hlt             ; Halt the CPU
 
-; Get available memory in KB
+; Get available memory in KB - Fixed version
 do_mem:
-    mov ah, 0x12
-    int 0x12
+    int 0x12        ; Call BIOS memory size function
+    push ax         ; Save the result (in KB)
+    
     mov si, mem_msg
     call print_string
-    call print_hex
+    
+    pop ax          ; Restore the memory size
+    call print_decimal
+    
     mov si, kb_msg
     call print_string
     call new_line
@@ -138,18 +125,22 @@ read_string:
 .loop:
     mov ah, 0
     int 0x16
-    cmp al, 13
+    cmp al, 13      ; Check for Enter key
     je .done
-    cmp al, 8
+    cmp al, 8       ; Check for Backspace
     je .backspace
+    cmp cx, 62      ; Check buffer limit
+    jae .loop
     stosb
     inc cx
-    mov ah, 0x0E
+    mov ah, 0x0E    ; Echo character
     int 0x10
     jmp .loop
 .backspace:
     test cx, cx
     jz .loop
+    dec di
+    dec cx
     mov ah, 0x0E
     mov al, 8
     int 0x10
@@ -157,8 +148,6 @@ read_string:
     int 0x10
     mov al, 8
     int 0x10
-    dec di
-    dec cx
     jmp .loop
 .done:
     mov al, 0
@@ -211,15 +200,49 @@ new_line:
     call print_char
     ret
 
-; Function to print a hex value
-print_hex:
-    aam
-    add ah, '0'
+; Function to print BCD number
+print_bcd:
+    push ax
+    mov ah, al
+    shr al, 4
+    and ah, 0x0F
     add al, '0'
-    mov si, hex_buf
-    mov [si], ah
-    mov [si+1], al
-    call print_string
+    add ah, '0'
+    call print_char
+    mov al, ah
+    call print_char
+    pop ax
+    ret
+
+; Function to print a decimal number
+print_decimal:
+    push ax
+    push bx
+    push cx
+    push dx
+    
+    mov bx, 10      ; Divisor
+    xor cx, cx      ; Counter for digits
+    
+.divide_loop:
+    xor dx, dx      ; Clear high word before division
+    div bx          ; Divide by 10
+    push dx         ; Save remainder
+    inc cx          ; Increment digit counter
+    test ax, ax     ; Check if quotient is zero
+    jnz .divide_loop
+    
+.print_loop:
+    pop ax          ; Get digit
+    add al, '0'     ; Convert to ASCII
+    mov ah, 0x0E    ; BIOS teletype output
+    int 0x10
+    loop .print_loop
+    
+    pop dx
+    pop cx
+    pop bx
+    pop ax
     ret
 
 ; Function to clear screen
@@ -244,8 +267,7 @@ unknown_cmd db 'Unknown command. Type "help" for available commands.', 13, 10, 0
 reboot_msg db 'System will reboot. Press any key...', 13, 10, 0
 time_msg db 'Current Time: ', 0
 mem_msg db 'Available memory: ', 0
-kb_msg db ' KB', 13, 10, 0
-hex_buf db '00', 0
+kb_msg db ' KB', 0
 
 ; Command strings
 cmd_help db 'help', 0
@@ -260,4 +282,3 @@ command_buffer times 64 db 0
 
 ; Pad to two full sectors
 times 1024-($-$$) db 0
-
