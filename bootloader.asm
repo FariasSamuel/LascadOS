@@ -49,7 +49,7 @@ start:
     int 0x13
     jc disk_error
 
-    ; Kernel succesful load message
+    ; Kernel successful load message
     mov si, msg_loaded_kernel
     call print_string
 
