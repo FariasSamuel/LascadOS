@@ -3,9 +3,14 @@ ORG 0x1000
 
 start:
     ; Set up data segments
+
+    mov byte [0x3000],0; maximum number of files
+    mov word [0x3001],0x3241; first available byte
+
     mov ax, 0
     mov ds, ax
     mov es, ax
+
 
     ; Print welcome message
     mov si, welcome_msg
@@ -25,6 +30,11 @@ command_loop:
     mov di, cmd_help
     call strcmp
     je do_help
+
+    mov si, command_buffer
+    mov di, crt_file
+    call strcmp
+    je create_file
 
     mov si, command_buffer
     mov di, cmd_clear
@@ -252,6 +262,77 @@ clear_screen:
     int 0x10
     ret
 
+read_decimal:
+    mov di,command_buffer
+    call read_string
+    xor ax,ax
+    mov si,command_buffer
+    mov ah,0x0E
+    mov bx,0
+    mov al,0
+.convert:
+    imul bx,10
+    mov al,[si]
+    sub al,'0'
+    add bh,al 
+    inc si
+    loop .convert
+    ret
+create_file:
+    push bx
+    mov bx,[0x3000]
+    cmp bx, 20
+    je .no_more_files
+    
+    mov di, command_buffer
+    call read_string
+    mov si, command_buffer
+    imul bx,12
+    add bx,0x3005
+.retry:
+    mov al, [si]
+    mov [bx], al
+    inc si
+    inc bx
+    loop .retry
+
+    call read_decimal
+    mov al,bh
+    xor bx,bx
+    mov bx,[0x3000]
+    imul bx,12
+    add bx,0x3005
+    add bx, 11
+    
+    mov [bx],al
+
+    mov cx,20
+    mov bx,[0x3000]
+    imul bx,12
+    add bx,0x3005
+.repetir:
+    mov al,[bx]
+    int 0x10
+    inc bx
+    loop .repetir
+
+    jmp .done
+.no_more_files:
+    mov si,files_error
+    call print_string
+    ret
+
+.no_more_bytes:
+    mov si,bytes_error
+    call print_string
+    ret
+
+.done:
+    mov si,sucess
+    call print_string
+    ret
+
+
 ; Data section
 welcome_msg db 'Interactive Kernel v0.2', 13, 10
            db 'Type "help" for commands', 13, 10, 0
@@ -268,17 +349,23 @@ reboot_msg db 'System will reboot. Press any key...', 13, 10, 0
 time_msg db 'Current Time: ', 0
 mem_msg db 'Available memory: ', 0
 kb_msg db ' KB', 0
+sucess db 'YAAAAAS, pisa prima.', 13, 10, 0
+files_error db 'There isnt available space for files.', 13, 10, 0
+bytes_error db 'There isnt available space for files.', 13, 10, 0
 
 ; Command strings
 cmd_help db 'help', 0
 cmd_clear db 'clear', 0
 cmd_reboot db 'reboot', 0
 cmd_time db 'time', 0
-cmd_shutdown db 'shutdown', 0
+crt_file db 'create', 0
 cmd_mem db 'mem', 0
+dlt_file db 'delete',0
+read_file db 'delete',0
+cmd_shutdown db 'shutdown', 0
 
 ; Buffer for user input
 command_buffer times 64 db 0
 
 ; Pad to two full sectors
-times 1024-($-$$) db 0
+;times 1080-($-$$) db 0
