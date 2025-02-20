@@ -279,15 +279,16 @@ read_decimal:
     loop .convert
     ret
 create_file:
-    push bx
+    push bx ;verifica se tem espaço na tabela
     mov bx,[0x3000]
     cmp bx, 20
     je .no_more_files
     
-    mov di, command_buffer
+    mov di, command_buffer;pede o nome do arquivo
     call read_string
-    mov si, command_buffer
-    imul bx,12
+
+    mov si, command_buffer;salva o arquivo na tabela
+    imul bx,13
     add bx,0x3005
 .retry:
     mov al, [si]
@@ -296,20 +297,25 @@ create_file:
     inc bx
     loop .retry
 
-    call read_decimal
-    mov al,bh
+    call read_decimal;pede quantidade de bytes
+    mov al,bh;salva a quantidade na tabela
     xor bx,bx
     mov bx,[0x3000]
-    imul bx,12
+    imul bx,13
     add bx,0x3005
-    add bx, 11
-    
+    add bx, 10
     mov [bx],al
+    mov cl, al
 
-    mov cx,20
+    inc bx;salva inicio do arquivo
+    mov ax,[0x3001]
+    mov [bx],ax
+
+    mov cx,13
     mov bx,[0x3000]
-    imul bx,12
+    imul bx,13
     add bx,0x3005
+    mov ah,0x0E
 .repetir:
     mov al,[bx]
     int 0x10
