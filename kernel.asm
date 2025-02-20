@@ -1,6 +1,8 @@
 BITS 16
 ORG 0x1000
 
+global print_string
+
 start:
     ; Set up data segments
 
@@ -60,6 +62,11 @@ command_loop:
     mov di, cmd_mem
     call strcmp
     je do_mem
+
+    mov si, command_buffer
+    mov di, cmd_test
+    call strcmp
+    je do_test
 
     ; If no command matched, print error
     mov si, unknown_cmd
@@ -127,6 +134,35 @@ do_mem:
     mov si, kb_msg
     call print_string
     call new_line
+    jmp command_loop
+
+; Launches the text editor
+; do_edit:
+;     call editor
+;    jmp command_loop
+
+; Function to read a keypress
+; read_key:
+;    mov ah, 0
+;    int 0x16
+;    ret
+
+; Command handler for 'test'
+do_test:
+    ; Load the C program into memory
+    mov ah, 0x02        ; BIOS read sector function
+    mov al, 1           ; Number of sectors to read
+    mov ch, 0           ; Cylinder number
+    mov cl, 2           ; Sector number (starting from 1)
+    mov dh, 0           ; Head number
+    mov dl, 0           ; Drive number (0 = floppy)
+    mov bx, 0x2000      ; Memory address to load the program
+    int 0x13            ; BIOS interrupt
+
+    ; Call the C program's main function
+    call 0x2000         ; Jump to the loaded program
+
+    ; Return to the kernel command loop
     jmp command_loop
 
 ; Function to read a string from keyboard
@@ -368,6 +404,7 @@ crt_file db 'create', 0
 cmd_mem db 'mem', 0
 dlt_file db 'delete',0
 read_file db 'delete',0
+cmd_test db 'test', 0
 cmd_shutdown db 'shutdown', 0
 
 ; Buffer for user input
