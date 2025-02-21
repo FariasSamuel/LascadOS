@@ -15,8 +15,9 @@ qemu-system-x86_64 -fda disk.img
 **time** - show current time (doesn't work properly on qemu)\
 **shutdown** - halts the cpu\
 **mem** - show available memory
+**edit** - opens text editor
 
-## To do
+## To-do
 
 - implement more (working) commands
 - file management system

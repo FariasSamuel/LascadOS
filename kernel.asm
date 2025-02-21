@@ -61,6 +61,11 @@ command_loop:
     call strcmp
     je do_mem
 
+    mov si, command_buffer
+    mov di, cmd_hi
+    call strcmp
+    je do_hi
+
     ; If no command matched, print error
     mov si, unknown_cmd
     call print_string
@@ -129,6 +134,37 @@ do_mem:
     call new_line
     jmp command_loop
 
+do_hi:                  ; Load the C program into memory at 0x2000
+    mov ah, 0x02        ; BIOS read sector function
+    mov al, 1           ; Read 1 sector
+    mov ch, 0           ; Cylinder 0
+    mov cl, 2           ; Sector 2 (bootloader is sector 0, kernel is sector 1)
+    mov dh, 0           ; Head 0
+    mov dl, 0           ; Drive 0 (floppy)
+    mov bx, 0x2000      ; Load to 0x2000 (physical address)
+    int 0x13
+    jc disk_error       ; Handle disk errors
+
+    ; Set up segments and stack for the C program
+    mov ax, 0x2000      ; Segment address (0x2000:0x0000 = physical 0x20000)
+    mov ds, ax          ; DS = 0x2000
+    mov es, ax          ; ES = 0x2000
+
+    mov ax, 0x9000      ; Stack segment (0x9000:0xFFFF)
+    mov ss, ax
+    mov sp, 0xFFFF      ; Stack pointer
+
+    ; Call the C program's main function
+    call 0x2000:0x0000  ; Far call to 0x2000 segment
+
+    ; Return to kernel
+    jmp command_loop
+
+disk_error:             ; Error handler
+    mov si, disk_error_msg
+    call print_string
+    jmp command_loop
+
 ; Function to read a string from keyboard
 read_string:
     xor cx, cx
@@ -185,6 +221,7 @@ strcmp:
     ret
 
 ; Function to print a string
+global print_string
 print_string:
     mov ah, 0x0E
 .loop:
@@ -349,7 +386,8 @@ help_msg db 'Available commands:', 13, 10
         db '  reboot    - Restart system', 13, 10
         db '  time      - Show current time', 13, 10
         db '  shutdown  - Halt the CPU', 13, 10
-        db '  mem       - Show available memory', 13, 10, 0
+        db '  mem       - Show available memory', 13, 10
+        db '  hi        - Run C program', 13, 10, 0  ;
 unknown_cmd db 'Unknown command. Type "help" for available commands.', 13, 10, 0
 reboot_msg db 'System will reboot. Press any key...', 13, 10, 0
 time_msg db 'Current Time: ', 0
@@ -358,6 +396,7 @@ kb_msg db ' KB', 0
 sucess db 'YAAAAAS, pisa prima.', 13, 10, 0
 files_error db 'There isnt available space for files.', 13, 10, 0
 bytes_error db 'There isnt available space for files.', 13, 10, 0
+disk_error_msg db "Disk read error!", 0
 
 ; Command strings
 cmd_help db 'help', 0
@@ -368,6 +407,7 @@ crt_file db 'create', 0
 cmd_mem db 'mem', 0
 dlt_file db 'delete',0
 read_file db 'delete',0
+cmd_hi db 'hi', 0
 cmd_shutdown db 'shutdown', 0
 
 ; Buffer for user input
