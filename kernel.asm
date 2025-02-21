@@ -208,6 +208,32 @@ edit_file:
     mov dx,[bx+9]
     mov bx,ax
     mov cx,0
+    push bx
+    push cx
+    push dx
+.write:
+    mov ah,0x0E
+    mov al,[bx]
+    int 0x10
+    inc cx
+    inc bx
+    cmp cx,dx
+    jle .write
+
+    push cx
+    MOV AH, 0x03
+    MOV BH, 0x00   
+    INT 0x10 
+    MOV AH, 0x02
+    MOV BH, 0x00  ; Página de vídeo
+    pop cx
+    sub dl,cl
+    INT 0x10
+
+    pop dx
+    pop cx
+    pop bx
+
 .escrever:
     mov ah,0
     int 0x16
@@ -288,6 +314,10 @@ edit_file:
     cmp cx,0
     je .escrever
     dec cx
+    push bx
+    add bx,cx
+    mov byte [bx],' '
+    pop bx
     mov ah, 0x0E
     mov al, 8
     int 0x10
