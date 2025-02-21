@@ -74,6 +74,11 @@ command_loop:
     call strcmp
     je do_mem
 
+    mov si, command_buffer
+    mov di, cmd_edit_text
+    call strcmp
+    je do_edit_text
+
     ; If no command matched, print error
     mov si, unknown_cmd
     call print_string
@@ -116,6 +121,8 @@ do_mem:
     call new_line
     jmp command_loop
 
+do_edit_text:
+    jmp 0x5000
 
 show_file:
     push ax
@@ -790,6 +797,7 @@ cmd_show       db 'show', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
+cmd_edit_text db 'edittext', 0
 
 ; Buffer for user input
 command_buffer  times 64 db 0
