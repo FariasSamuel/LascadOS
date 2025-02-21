@@ -150,14 +150,29 @@ show_file:
     mov cx,0
 .escrever:
     mov ah,0x0E
-    push bx
-    add bx,cx
     mov al,[bx]
-    pop bx
     int 0x10
     inc cx
+    inc bx   
+    cmp cx,40
+    jne .sem_quebra
+    push bx
+    push dx
+    MOV AH, 0x03
+    MOV BH, 0x00   
+    INT 0x10 
+    MOV AH, 0x02
+    MOV BH, 0x00  ; Página de vídeo
+    INC DH
+    MOV DL,0
+    INT 0x10
+    mov cx,0
+    pop dx
+    sub dx,40
+    pop bx
+.sem_quebra:        
     cmp cx,dx
-    jne .escrever
+    jle .escrever
     jmp .done
 
 .done:
