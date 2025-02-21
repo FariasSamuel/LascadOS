@@ -91,7 +91,7 @@ text_editor:
     call print_string
     ret
 
-welcome_msg db 'ViText', 13, 10, 0
+welcome_msg db 'Welcome to ViText :3', 13, 10, 0
 editor_instructions db 'Enter text (ESC to exit, Backspace to delete):', 13, 10, 0
 exit_msg db 13, 10, 'Exiting text editor.', 13, 10, 0
 

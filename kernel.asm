@@ -77,9 +77,9 @@ command_loop:
     je do_mem
 
     mov si, command_buffer
-    mov di, cmd_edit_text
+    mov di, cmd_app
     call strcmp
-    je do_edit_text
+    je do_app
 
     ; If no command matched, print error
     mov si, unknown_cmd
@@ -123,7 +123,7 @@ do_mem:
     call new_line
     jmp command_loop
 
-do_edit_text:
+do_app:
     jmp 0x5000
 
 show_file:
@@ -183,8 +183,6 @@ show_file:
     mov si, no_matched_files_msg
     call print_string
     jmp command_loop
-
-
 
 edit_file:
     push ax
@@ -764,7 +762,8 @@ help_msg        db 'Available commands:', 13, 10
                 db '  clear     - Clear screen', 13, 10
                 db '  reboot    - Restart system', 13, 10
                 db '  shutdown  - Halt the CPU', 13, 10
-                db '  mem       - Show available memory', 13, 10, 0
+                db '  mem       - Show available memory', 13, 10,
+                db '  app       - Opens the text editor', 13, 10, 0
 unknown_cmd     db 'Unknown command. Type "help" for available commands.', 13, 10, 0
 reboot_msg      db 'System will reboot. Press any key...', 13, 10, 0
 mem_msg         db 'Available memory: ', 0
@@ -799,7 +798,7 @@ cmd_show       db 'show', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
-cmd_edit_text db 'edittext', 0
+cmd_app         db 'app', 0
 
 ; Buffer for user input
 command_buffer  times 64 db 0
