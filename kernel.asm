@@ -35,6 +35,11 @@ command_loop:
     je create_file
 
     mov si, command_buffer
+    mov di, cmd_delete
+    call strcmp
+    je delete_file
+
+    mov si, command_buffer
     mov di, cmd_list
     call strcmp
     je do_list
@@ -102,7 +107,65 @@ do_mem:
     jmp command_loop
 
 
+delete_file:
+    push ax
+    push bx
+    push cx
+    push dx
 
+    mov bx, 0x3005
+    mov cl, [0x3000]
+
+    mov si, filename_prompt
+    call print_string
+    mov di, command_buffer
+    call read_string
+    mov di, command_buffer
+.search:  
+    mov si,bx
+    call strcmp
+    je .achou
+    call print_string
+    mov ah,0x0E
+    mov al,32
+    int 0x10
+    add bx,13
+    dec cl
+    jnz .search
+    jmp .not_find
+.achou:
+    push bx
+    mov al, [0x3000]
+    xor ah, ah         
+    mov bl, 13         
+    mul bl              
+    add ax, 0x3005 
+    add ax,13
+    mov cx,ax
+    pop bx
+.deslocar:
+    mov ax,[bx+13]
+    mov [bx],ax
+    inc bx
+    cmp bx,cx
+    jg .done
+    jmp .deslocar
+
+.done:
+    dec byte [0x3000]
+    pop bx
+    pop cx
+    pop dx
+    mov si, success
+    call print_string
+    jmp command_loop
+.not_find:
+    pop bx
+    pop cx
+    pop dx
+    mov si, no_matched_files_msg
+    call print_string
+    jmp command_loop
 
 create_file:
     push ax
@@ -370,6 +433,7 @@ strcmp:
     jne .not_equal
     test al, al
     jz .equal
+   
     inc si
     inc di
     jmp .loop
@@ -454,6 +518,7 @@ prompt          db '> ', 0
 help_msg        db 'Available commands:', 13, 10
                 db '  help      - Show this help', 13, 10
                 db '  create    - Create a file', 13, 10
+                db '  delete    - Delete a file', 13, 10
                 db '  list      - List all files', 13, 10
                 db '  clear     - Clear screen', 13, 10
                 db '  reboot    - Restart system', 13, 10
@@ -478,12 +543,14 @@ list_addr       db ' bytes at ', 0
 total_files     db 'Total files: ', 0
 files_suffix    db ' file(s)', 13, 10, 0
 no_files_msg    db 'No files found.', 13, 10, 0
-
+matched_file_msg    db 'file found.', 13, 10, 0
+no_matched_files_msg    db 'No file found.', 13, 10, 0
 ; Command strings
 cmd_help        db 'help', 0
 cmd_clear       db 'clear', 0
 cmd_reboot      db 'reboot', 0
 cmd_create      db 'create', 0
+cmd_delete      db 'delete', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
