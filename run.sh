@@ -7,13 +7,10 @@ nasm -f bin kernel.asm -o kernel.bin
 
 # Step 2: Compile and link the C program
 echo "Compiling C program..."
-gcc -m16 -ffreestanding -nostdlib -c hi.c -o hi.o
+ia16-elf-gcc -ffreestanding -m16 -nostdlib -c hi.c -o hi.o
 
-echo "Linking object to create ELF binary..."
-ld -m elf_i386 -o hi.elf hi.o
-
-echo "Converting ELF to raw binary..."
-objcopy -O binary hi.elf hi.bin
+echo "Linking the object file to create ELF binary..."
+ia16-elf-ld -Ttext 0x2000 --oformat=binary -o hi.bin hi.o
 
 # Step 3: Create the disk image and write files
 echo "Creating disk image..."
@@ -26,7 +23,7 @@ echo "Writing kernel to sector 1..."
 dd if=kernel.bin of=disk.img bs=512 seek=1 conv=notrunc
 
 echo "Writing C program to sector 2..."
-dd if=test.bin of=disk.img bs=512 seek=2 conv=notrunc
+dd if=hi.bin of=disk.img bs=512 seek=2 conv=notrunc
 
 # Step 4: Run in QEMU
 echo "Starting QEMU..."
