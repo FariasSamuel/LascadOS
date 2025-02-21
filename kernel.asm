@@ -164,7 +164,8 @@ show_file:
     pop dx
     pop cx
     pop bx
-    mov si, success
+    call new_line
+    mov si, success_find
     call print_string
     jmp command_loop
 .not_find:
@@ -195,7 +196,7 @@ edit_file:
     mov si,bx
     call strcmp
     je .achou
-    call print_string
+    ;call print_string
     mov ah,0x0E
     mov al,32
     int 0x10
@@ -331,6 +332,8 @@ edit_file:
     pop dx
     pop cx
     pop bx
+    mov si, 0xA
+    call new_line
     mov si, success_edit
     call print_string
     jmp command_loop
@@ -554,7 +557,7 @@ create_file:
     mov [bx + 9], ax   ; Store at offset 9
 
     mov ax,[bx+9]
-    call print_decimal
+    ;call print_decimal
 
     ; Calculate and store file address
     mov ax, [0x3001]    ; Current data pointer
@@ -567,7 +570,7 @@ create_file:
     inc byte [0x3000]
 
     ; Success
-    mov si, success
+    mov si, success_create
     call print_string
     
     pop dx
@@ -856,9 +859,10 @@ size_prompt     db 'Enter file size (bytes): ', 0
 invalid_size_msg db 'Invalid file size.', 13, 10, 0
 too_large_msg   db 'File too large (max 1000 bytes).', 13, 10, 0
 files_error     db "Maximum number of files reached.", 13, 10, 0
-success         db 'File created successfully.', 13, 10, 0
+success_create  db 'File created successfully.', 13, 10, 0
 success_delete  db 'File deleted successfully.', 13, 10, 0
 success_edit    db 'File edited successfully.', 13, 10, 0
+success_find    db 'File found successfully.', 13, 10, 0
 list_header     db 'Files:', 13, 10, 0
 list_separator  db '. ', 0
 list_size       db ' - ', 0
@@ -875,7 +879,7 @@ cmd_reboot      db 'reboot', 0
 cmd_create      db 'create', 0
 cmd_delete      db 'delete', 0
 cmd_edit        db 'edit', 0
-cmd_show       db 'show', 0
+cmd_show        db 'show', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
