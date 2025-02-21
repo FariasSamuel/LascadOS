@@ -6,10 +6,14 @@ echo "Assembling kernel..."
 nasm -f bin kernel.asm -o kernel.bin
 
 # Step 2: Compile and link the C program
-echo "Compiling and linking C program..."
-i686-elf-gcc -ffreestanding -m16 -nostdlib -c test.c -o test.o
-i686-elf-ld -Ttext=0x2000 -o test.elf test.o
-i686-elf-objcopy -O binary test.elf test.bin
+echo "Compiling C program..."
+gcc -m16 -ffreestanding -nostdlib -c hi.c -o hi.o
+
+echo "Linking object to create ELF binary..."
+ld -m elf_i386 -o hi.elf hi.o
+
+echo "Converting ELF to raw binary..."
+objcopy -O binary hi.elf hi.bin
 
 # Step 3: Create the disk image and write files
 echo "Creating disk image..."
