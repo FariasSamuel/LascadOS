@@ -257,6 +257,10 @@ edit_file:
     pop bx
 
 .escrever:
+
+
+
+
     mov ah,0
     int 0x16
     cmp al,8
@@ -306,6 +310,8 @@ edit_file:
     jmp .finished_arrow
 
 .arrow_left:
+    cmp cx,0
+    je .finished_arrow
     ; Exibe a mensagem para seta para a esquerda
     push cx
     MOV AH, 0x03
@@ -313,20 +319,41 @@ edit_file:
     INT 0x10 
     MOV AH, 0x02
     MOV BH, 0x00  ; Página de vídeo
+    cmp DL,0
+    je .pula_cima
     dec DL
     INT 0x10
     pop cx
-    dec cx 
+    inc cx 
+    jmp .finished_arrow
+.pula_cima:
+    mov DL,40
+    dec DH
+    INT 0x10
+    pop cx
+    inc cx 
     jmp .finished_arrow
 
 .arrow_right:
+    cmp cx,dx
+    je .finished_arrow 
+
     push cx
     MOV AH, 0x03
     MOV BH, 0x00   
     INT 0x10 
     MOV AH, 0x02
     MOV BH, 0x00  ; Página de vídeo
+    cmp DL,41
+    je .pula_baixo
     inc DL
+    INT 0x10
+    pop cx
+    inc cx 
+    jmp .finished_arrow
+.pula_baixo:
+    mov DL,0
+    inc DH
     INT 0x10
     pop cx
     inc cx 
