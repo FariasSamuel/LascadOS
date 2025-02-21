@@ -41,7 +41,7 @@ start:
     mov bx, 0x1000     ; load kernel to 0x1000
 
     mov ah, 0x02       ; BIOS read sector function
-    mov al, 4          ; number of sectors to read (increased to 2)
+    mov al, 5         ; number of sectors to read (increased to 2)
     mov ch, 0          ; cylinder 0
     mov cl, 2          ; sector 2 (sectors start at 1)
     mov dh, 0          ; head 0

@@ -215,6 +215,8 @@ edit_file:
     je .backspace
     cmp al,13
     je .done
+    cmp al,0x00
+    je .check_arrow
     mov ah,0x0E
     int 0x10
     push bx
@@ -225,6 +227,63 @@ edit_file:
     cmp cx,dx
     jne .escrever
     jmp .done
+.check_arrow:
+    ; Lê o scan code da tecla (está em AH)
+    push ax
+    push bx
+    push dx
+    cmp ah, 0x48    ; Seta para cima?
+    je .arrow_up
+    cmp ah, 0x50    ; Seta para baixo?
+    je .arrow_down
+    cmp ah, 0x4B    ; Seta para a esquerda?
+    je .arrow_left
+    cmp ah, 0x4D    ; Seta para a direita?
+    je .arrow_right
+    .finished_arrow:
+    pop dx
+    pop bx
+    pop ax
+    jmp .escrever   ; Se não for uma seta, volta ao loop
+
+.arrow_up:
+    ; Exibe a mensagem para seta para cima
+    ;mov si, msg_up
+    call print_string
+    jmp .finished_arrow
+
+.arrow_down:
+    
+    call print_string
+    jmp .finished_arrow
+
+.arrow_left:
+    ; Exibe a mensagem para seta para a esquerda
+    push cx
+    MOV AH, 0x03
+    MOV BH, 0x00   
+    INT 0x10 
+    MOV AH, 0x02
+    MOV BH, 0x00  ; Página de vídeo
+    dec DL
+    INT 0x10
+    pop cx
+    dec cx 
+    jmp .finished_arrow
+
+.arrow_right:
+    push cx
+    MOV AH, 0x03
+    MOV BH, 0x00   
+    INT 0x10 
+    MOV AH, 0x02
+    MOV BH, 0x00  ; Página de vídeo
+    inc DL
+    INT 0x10
+    pop cx
+    inc cx 
+    jmp .finished_arrow
+    
 .backspace:
     cmp cx,0
     je .escrever
