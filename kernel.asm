@@ -242,7 +242,7 @@ edit_file:
     pop dx
     pop cx
     pop bx
-    mov si, success
+    mov si, success_edit
     call print_string
     jmp command_loop
 .not_find:
@@ -259,59 +259,144 @@ delete_file:
     push bx
     push cx
     push dx
+    push si
+    push di
 
-    mov bx, 0x3005
-    mov cl, [0x3000]
+    mov bx, 0x3005          ; Start of file table
+    mov cl, [0x3000]        ; Number of files
 
     mov si, filename_prompt
     call print_string
     mov di, command_buffer
     call read_string
+
+.search:
+    push cx                 ; Save file counter
+    push bx                 ; Save table pointer
+    
     mov di, command_buffer
-.search:  
-    mov si,bx
+    mov si, bx              ; Point SI to filename in table
     call strcmp
-    je .achou
-    call print_string
-    mov ah,0x0E
-    mov al,32
-    int 0x10
-    add bx,13
+    je .found
+    
+    pop bx                 ; Restore table pointer
+    pop cx                 ; Restore counter
+    add bx, 13             ; Move to next entry
     dec cl
     jnz .search
-    jmp .not_find
-.achou:
-    push bx
-    mov al, [0x3000]
-    xor ah, ah         
-    mov bl, 13         
-    mul bl              
-    add ax, 0x3005 
-    add ax,13
-    mov cx,ax
-    pop bx
-.deslocar:
-    mov ax,[bx+13]
-    mov [bx],ax
-    inc bx
-    cmp bx,cx
-    jg .done
-    jmp .deslocar
+    jmp .not_found
 
-.done:
-    dec byte [0x3000]
-    pop dx
-    pop cx
-    pop bx
-    mov si, success
+.found:
+    pop bx                 ; Restore table pointer to found entry
+    pop cx                 ; Restore counter
+    
+    ; Save important values
+    mov dx, [bx + 9]       ; Get file size
+    mov ax, [bx + 11]      ; Get file address
+    
+    ; Move file data (compact memory)
+    mov si, ax             ; Source address
+    add si, dx             ; Source + size = next data block
+    mov di, ax             ; Destination = deleted file's address
+    
+    ; Calculate bytes to move
+    mov cx, [0x3001]       ; End of data
+    sub cx, si             ; Subtract start of next block
+    
+    ; Move the data
+    cld                    ; Ensure direction flag is clear (forward)
+    rep movsb              ; Move the data
+    
+    ; Update file addresses for all subsequent files
+    push bx                ; Save pointer to deleted entry
+    
+    ; Get index of deleted file
+    sub bx, 0x3005         ; Calculate offset from table start
+    xor ah, ah
+    mov al, 13
+    div al                 ; AX = index of deleted file
+    
+    mov ch, al             ; Save index in CH
+    inc ch                 ; Next file index
+    
+    ; Calculate address of next file entry
+    mov al, ch
+    mov ah, 0
+    mov cl, 13
+    mul cl                 ; AX = next file index * 13
+    add ax, 0x3005         ; Base address
+    mov bx, ax             ; BX = next file entry
+    
+    ; Get total number of files
+    mov cl, [0x3000]
+    sub cl, ch             ; Number of files after deleted file
+    
+.update_loop:
+    test cl, cl
+    jz .update_done        ; If no more files, done
+    
+    ; Update file address
+    mov ax, [bx + 11]      ; Get current address
+    sub ax, dx             ; Subtract deleted file size
+    mov [bx + 11], ax      ; Store updated address
+    
+    add bx, 13             ; Move to next entry
+    dec cl
+    jmp .update_loop
+    
+.update_done:
+    pop bx                 ; Restore pointer to deleted entry
+    
+    ; Move file table entries to compact the table
+    push bx                ; Save pointer again
+    
+    mov si, bx
+    add si, 13             ; Source = next entry
+    mov di, bx             ; Destination = current entry
+    
+    ; Calculate how many entries to move
+    mov cl, [0x3000]
+    sub cl, ch
+    inc cl                 ; Include the entry we're replacing
+    
+    ; Calculate bytes to move
+    mov al, cl
+    mov ah, 0
+    mov cl, 13
+    mul cl                 ; AX = bytes to move
+    mov cx, ax
+    
+    rep movsb              ; Move entries
+    
+    pop bx                 ; Restore pointer
+    
+    ; Update data pointer
+    mov ax, [0x3001]
+    sub ax, dx             ; Subtract deleted file size
+    mov [0x3001], ax       ; Update data pointer
+    
+    dec byte [0x3000]      ; Decrease file count
+    
+    mov si, success_delete
     call print_string
-    jmp command_loop
-.not_find:
+    
+    pop di
+    pop si
     pop dx
     pop cx
     pop bx
+    pop ax
+    jmp command_loop
+
+.not_found:
     mov si, no_matched_files_msg
     call print_string
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
     jmp command_loop
 
 create_file:
@@ -683,6 +768,8 @@ invalid_size_msg db 'Invalid file size.', 13, 10, 0
 too_large_msg   db 'File too large (max 1000 bytes).', 13, 10, 0
 files_error     db "Maximum number of files reached.", 13, 10, 0
 success         db 'File created successfully.', 13, 10, 0
+success_delete  db 'File deleted successfully.', 13, 10, 0
+success_edit    db 'File edited successfully.', 13, 10, 0
 list_header     db 'Files:', 13, 10, 0
 list_separator  db '. ', 0
 list_size       db ' - ', 0
