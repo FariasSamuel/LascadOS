@@ -10,7 +10,10 @@ echo "Compiling C program..."
 ia16-elf-gcc -ffreestanding -m16 -nostdlib -c hi.c -o hi.o
 
 echo "Linking the object file to create ELF binary..."
-ia16-elf-ld -Ttext 0x2000 --oformat=binary -o hi.bin hi.o
+ia16-elf-ld -m elf_i386 -Ttext=0x2000 -o hi.elf hi.o
+
+echo "Converting ELF to raw binary..."
+objcopy -O binary hi.elf hi.bin
 
 # Step 3: Create the disk image and write files
 echo "Creating disk image..."
