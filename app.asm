@@ -1,7 +1,6 @@
 BITS 16
 ORG 0x5000
 
-; Import kernel functions
 extern print_string
 extern read_string
 extern strcmp
@@ -10,83 +9,74 @@ extern print_decimal
 extern new_line
 
 start:
-    ; Print welcome message
     mov si, welcome_msg
     call print_string
-
-    ; Enter text editor mode
     call text_editor
-
-    ; Exit the app
     ret
 
 text_editor:
-    ; Clear the screen
     call clear_screen
 
-    ; Print editor instructions
     mov si, editor_instructions
     call print_string
 
-    ; Initialize editor variables
-    mov di, text_buffer  ; Pointer to text buffer
-    mov cx, 0            ; Character counter
+    mov di, text_buffer  ; Ponteiro para buffer de texto
+    mov cx, 0            ; Contador de caracteres
 
 .edit_loop:
-    ; Read a key
-    mov ah, 0
-    int 0x16
+    hlt                  ; Aguarda interrupção para reduzir uso da CPU
 
-    ; Handle special keys
-    cmp al, 8           ; Backspace
+    mov ah, 0
+    int 0x16             ; Espera tecla
+
+    cmp al, 8
     je .backspace
-    cmp al, 13          ; Enter
+    cmp al, 13
     je .newline
-    cmp al, 27          ; ESC
+    cmp al, 27
     je .exit_editor
 
-    ; Normal character
-    mov ah, 0x0E        ; Print character
+    cmp cx, 1024        ; Se buffer cheio, ignora entrada
+    jae .edit_loop
+
+    mov ah, 0x0E
     int 0x10
-    stosb               ; Store character in buffer
-    inc cx              ; Increment character count
+    stosb               ; Armazena caractere no buffer
+    inc cx
     jmp .edit_loop
 
 .backspace:
-    ; Handle backspace
-    cmp cx, 0           ; If buffer is empty, ignore
+    cmp cx, 0
     je .edit_loop
-    dec di              ; Move pointer back
-    dec cx              ; Decrement character count
-    mov byte [di], 0    ; Clear the character
+    dec di
+    dec cx
+    mov byte [di], 0
 
-    ; Print backspace effect
+    ; Efeito visual do backspace
     mov ah, 0x0E
     mov al, 8
-    int 0x10            ; Backspace
+    int 0x10
     mov al, ' '
-    int 0x10            ; Print space
+    int 0x10
     mov al, 8
-    int 0x10            ; Backspace again
+    int 0x10
     jmp .edit_loop
 
 .newline:
-    ; Handle newline (Enter key)
     mov ah, 0x0E
-    mov al, 13          ; Carriage return
+    mov al, 13
     int 0x10
-    mov al, 10          ; Line feed
+    mov al, 10
     int 0x10
-    mov byte [di], 13   ; Store carriage return
+
+    mov byte [di], 13
     inc di
-    mov byte [di], 10   ; Store line feed
+    mov byte [di], 10
     inc di
-    add cx, 2           ; Increment character count
+    add cx, 2
     jmp .edit_loop
 
 .exit_editor:
-    ; Save the text buffer to a file (optional)
-    ; For now, just exit
     mov si, exit_msg
     call print_string
     ret
@@ -95,5 +85,4 @@ welcome_msg db 'Welcome to ViText :3', 13, 10, 0
 editor_instructions db 'Enter text (ESC to exit, Backspace to delete):', 13, 10, 0
 exit_msg db 13, 10, 'Exiting text editor.', 13, 10, 0
 
-; Text buffer (1 KB)
 text_buffer times 1024 db 0
