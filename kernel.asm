@@ -35,9 +35,19 @@ command_loop:
     je create_file
 
     mov si, command_buffer
+    mov di, cmd_edit
+    call strcmp
+    je edit_file
+
+    mov si, command_buffer
     mov di, cmd_delete
     call strcmp
     je delete_file
+
+    mov si, command_buffer
+    mov di, cmd_show
+    call strcmp
+    je show_file
 
     mov si, command_buffer
     mov di, cmd_list
@@ -107,6 +117,143 @@ do_mem:
     jmp command_loop
 
 
+show_file:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov bx, 0x3005
+    mov cl, [0x3000]
+
+    mov si, filename_prompt
+    call print_string
+    mov di, command_buffer
+    call read_string
+    mov di, command_buffer
+.search:  
+    mov si,bx
+    call strcmp
+    je .achou
+    call print_string
+    mov ah,0x0E
+    mov al,32
+    int 0x10
+    add bx,13
+    dec cl
+    jnz .search
+    jmp .not_find
+.achou:
+    mov ax,[bx+11]
+    mov dx,[bx+9]
+    mov bx,ax
+    mov cx,0
+.escrever:
+    mov ah,0x0E
+    push bx
+    add bx,cx
+    mov al,[bx]
+    pop bx
+    int 0x10
+    inc cx
+    cmp cx,dx
+    jne .escrever
+    jmp .done
+
+.done:
+    pop dx
+    pop cx
+    pop bx
+    mov si, success
+    call print_string
+    jmp command_loop
+.not_find:
+    pop dx
+    pop cx
+    pop bx
+    mov si, no_matched_files_msg
+    call print_string
+    jmp command_loop
+
+
+
+edit_file:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov bx, 0x3005
+    mov cl, [0x3000]
+
+    mov si, filename_prompt
+    call print_string
+    mov di, command_buffer
+    call read_string
+    mov di, command_buffer
+.search:  
+    mov si,bx
+    call strcmp
+    je .achou
+    call print_string
+    mov ah,0x0E
+    mov al,32
+    int 0x10
+    add bx,13
+    dec cl
+    jnz .search
+    jmp .not_find
+.achou:
+    mov ax,[bx+11]
+    mov dx,[bx+9]
+    mov bx,ax
+    mov cx,0
+.escrever:
+    mov ah,0
+    int 0x16
+    cmp al,8
+    je .backspace
+    cmp al,13
+    je .done
+    mov ah,0x0E
+    int 0x10
+    push bx
+    add bx,cx
+    mov [bx],al
+    pop bx
+    inc cx
+    cmp cx,dx
+    jne .escrever
+    jmp .done
+.backspace:
+    cmp cx,0
+    je .escrever
+    dec cx
+    mov ah, 0x0E
+    mov al, 8
+    int 0x10
+    mov al, ' '
+    int 0x10
+    mov al, 8
+    int 0x10
+    jmp .escrever
+
+.done:
+    pop dx
+    pop cx
+    pop bx
+    mov si, success
+    call print_string
+    jmp command_loop
+.not_find:
+    pop dx
+    pop cx
+    pop bx
+    mov si, no_matched_files_msg
+    call print_string
+    jmp command_loop
+
+
 delete_file:
     push ax
     push bx
@@ -153,16 +300,16 @@ delete_file:
 
 .done:
     dec byte [0x3000]
-    pop bx
-    pop cx
     pop dx
+    pop cx
+    pop bx
     mov si, success
     call print_string
     jmp command_loop
 .not_find:
-    pop bx
-    pop cx
     pop dx
+    pop cx
+    pop bx
     mov si, no_matched_files_msg
     call print_string
     jmp command_loop
@@ -551,6 +698,8 @@ cmd_clear       db 'clear', 0
 cmd_reboot      db 'reboot', 0
 cmd_create      db 'create', 0
 cmd_delete      db 'delete', 0
+cmd_edit        db 'edit', 0
+cmd_show       db 'show', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
