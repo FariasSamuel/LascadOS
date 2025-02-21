@@ -1,6 +1,8 @@
 BITS 16
 ORG 0x1000
 
+global print_string
+
 start:
     ; Set up data segments
     mov byte [0x3000], 0      ; file count = 0 (max 20 files)

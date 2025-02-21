@@ -16,7 +16,7 @@ qemu-system-x86_64 -fda disk.img
 **shutdown** - halts the cpu\
 **mem** - show available memory
 
-## To do
+## To-do
 
 - implement more (working) commands
 - file management system
