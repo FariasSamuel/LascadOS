@@ -164,8 +164,7 @@ show_file:
     pop dx
     pop cx
     pop bx
-    call new_line
-    mov si, success_find
+    mov si, success
     call print_string
     jmp command_loop
 .not_find:
@@ -196,7 +195,7 @@ edit_file:
     mov si,bx
     call strcmp
     je .achou
-    ;call print_string
+    call print_string
     mov ah,0x0E
     mov al,32
     int 0x10
@@ -212,23 +211,45 @@ edit_file:
     push bx
     push cx
     push dx
+    push dx
 .write:
     mov ah,0x0E
     mov al,[bx]
     int 0x10
     inc cx
-    inc bx
-    cmp cx,dx
-    jle .write
-
-    push cx
+    inc bx   
+    cmp cx,40
+    jne .sem_quebra
+    push bx
+    push dx
     MOV AH, 0x03
     MOV BH, 0x00   
     INT 0x10 
     MOV AH, 0x02
     MOV BH, 0x00  ; Página de vídeo
-    pop cx
-    sub dl,cl
+    INC DH
+    MOV DL,0
+    INT 0x10
+    mov cx,0
+    pop dx
+    sub dx,40
+    pop bx
+.sem_quebra:        
+    cmp cx,dx
+    jle .write
+    
+    pop ax
+    mov bx,40
+    div bx    
+
+    MOV AH, 0x03
+    MOV BH, 0x00   
+    INT 0x10
+
+    MOV AH, 0x02
+    MOV BH, 0x00  ; Página de vídeo
+    mov DL,0
+    sub DH,al
     INT 0x10
 
     pop dx
@@ -332,8 +353,6 @@ edit_file:
     pop dx
     pop cx
     pop bx
-    mov si, 0xA
-    call new_line
     mov si, success_edit
     call print_string
     jmp command_loop
@@ -557,7 +576,7 @@ create_file:
     mov [bx + 9], ax   ; Store at offset 9
 
     mov ax,[bx+9]
-    ;call print_decimal
+    call print_decimal
 
     ; Calculate and store file address
     mov ax, [0x3001]    ; Current data pointer
@@ -570,7 +589,7 @@ create_file:
     inc byte [0x3000]
 
     ; Success
-    mov si, success_create
+    mov si, success
     call print_string
     
     pop dx
@@ -859,10 +878,9 @@ size_prompt     db 'Enter file size (bytes): ', 0
 invalid_size_msg db 'Invalid file size.', 13, 10, 0
 too_large_msg   db 'File too large (max 1000 bytes).', 13, 10, 0
 files_error     db "Maximum number of files reached.", 13, 10, 0
-success_create  db 'File created successfully.', 13, 10, 0
+success         db 'File created successfully.', 13, 10, 0
 success_delete  db 'File deleted successfully.', 13, 10, 0
 success_edit    db 'File edited successfully.', 13, 10, 0
-success_find    db 'File found successfully.', 13, 10, 0
 list_header     db 'Files:', 13, 10, 0
 list_separator  db '. ', 0
 list_size       db ' - ', 0
@@ -879,7 +897,7 @@ cmd_reboot      db 'reboot', 0
 cmd_create      db 'create', 0
 cmd_delete      db 'delete', 0
 cmd_edit        db 'edit', 0
-cmd_show        db 'show', 0
+cmd_show       db 'show', 0
 cmd_list        db 'list', 0
 cmd_shutdown    db 'shutdown', 0
 cmd_mem         db 'mem', 0
